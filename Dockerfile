@@ -8,6 +8,19 @@ WORKDIR /app
 ARG GITHUB_TOKEN
 ARG GITHUB_USERNAME
 
+# Debug: Verificar que las variables existen (sin mostrar el token completo)
+RUN echo "Checking build args..." && \
+    if [ -z "$GITHUB_TOKEN" ]; then \
+        echo "ERROR: GITHUB_TOKEN is not set"; \
+    else \
+        echo "GITHUB_TOKEN is set (first 10 chars: ${GITHUB_TOKEN:0:10}...)"; \
+    fi && \
+    if [ -z "$GITHUB_USERNAME" ]; then \
+        echo "ERROR: GITHUB_USERNAME is not set"; \
+    else \
+        echo "GITHUB_USERNAME is set: $GITHUB_USERNAME"; \
+    fi
+
 # Copiar archivos de configuración de Maven
 COPY pom.xml .
 COPY .mvn .mvn
@@ -28,13 +41,16 @@ RUN mkdir -p /root/.m2 && \
     echo '  </servers>' >> /root/.m2/settings.xml && \
     echo '</settings>' >> /root/.m2/settings.xml
 
-# Descargar dependencias
-RUN mvn dependency:go-offline -B
+# Verificar que settings.xml se creó correctamente
+RUN echo "Settings.xml created:" && cat /root/.m2/settings.xml | grep -v password
+
+# Intentar descargar dependencias (permitir que falle)
+RUN mvn dependency:resolve -B || echo "Some dependencies may not be resolved yet"
 
 # Copiar código fuente
 COPY src ./src
 
-# Compilar la aplicación
+# Compilar la aplicación (esto descargará la librería si settings.xml está bien)
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime
@@ -64,3 +80,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${LOGIN_PORT:-8085}/actuator/health || exit 1
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
