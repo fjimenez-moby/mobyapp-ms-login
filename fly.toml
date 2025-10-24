@@ -1,0 +1,31 @@
+app = "mobyapp-ms-login"
+primary_region = "gru"
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    GITHUB_TOKEN = "{{ .Env.GITHUB_TOKEN }}"
+    GITHUB_USERNAME = "{{ .Env.GITHUB_USERNAME }}"
+
+[env]
+  LOGIN_PORT = "8085"
+
+[[services]]
+  internal_port = 8085
+  protocol = "tcp"
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+[http_service]
+  internal_port = 8085
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
