@@ -8,25 +8,24 @@ WORKDIR /app
 ARG GITHUB_TOKEN
 ARG GITHUB_USERNAME
 
-# Debug: Verificar que las variables existen (sin mostrar el token completo)
-RUN echo "Checking build args..." && \
+# Verificar que las variables existen
+RUN echo "Configuring GitHub authentication..." && \
     if [ -z "$GITHUB_TOKEN" ]; then \
         echo "ERROR: GITHUB_TOKEN is not set"; \
-    else \
-        echo "GITHUB_TOKEN is set (first 10 chars: ${GITHUB_TOKEN:0:10}...)"; \
+        exit 1; \
     fi && \
     if [ -z "$GITHUB_USERNAME" ]; then \
         echo "ERROR: GITHUB_USERNAME is not set"; \
-    else \
-        echo "GITHUB_USERNAME is set: $GITHUB_USERNAME"; \
-    fi
+        exit 1; \
+    fi && \
+    echo "GitHub username: $GITHUB_USERNAME"
 
 # Copiar archivos de configuración de Maven
 COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
 
-# Crear settings.xml con credenciales de GitHub para acceder a packages privados
+# Crear settings.xml con credenciales de GitHub
 RUN mkdir -p /root/.m2 && \
     echo '<?xml version="1.0" encoding="UTF-8"?>' > /root/.m2/settings.xml && \
     echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"' >> /root/.m2/settings.xml && \
@@ -41,16 +40,17 @@ RUN mkdir -p /root/.m2 && \
     echo '  </servers>' >> /root/.m2/settings.xml && \
     echo '</settings>' >> /root/.m2/settings.xml
 
-# Verificar que settings.xml se creó correctamente
-RUN echo "Settings.xml created:" && cat /root/.m2/settings.xml | grep -v password
+# Verificar que settings.xml se creó
+RUN echo "Settings.xml created successfully" && \
+    cat /root/.m2/settings.xml | grep -v password
 
-# Intentar descargar dependencias (permitir que falle)
-RUN mvn dependency:resolve -B || echo "Some dependencies may not be resolved yet"
+# Descargar dependencias (forzar actualización desde GitHub)
+RUN mvn dependency:resolve -U -B
 
 # Copiar código fuente
 COPY src ./src
 
-# Compilar la aplicación (esto descargará la librería si settings.xml está bien)
+# Compilar la aplicación
 RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime
@@ -72,7 +72,7 @@ USER appuser
 # Exponer puerto
 EXPOSE ${LOGIN_PORT:-8085}
 
-# Variables de entorno
+# Variables de entorno (optimizado para máquinas pequeñas)
 ENV JAVA_OPTS="-Xmx128m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Xss512k"
 
 # Healthcheck
