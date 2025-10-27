@@ -73,7 +73,7 @@ USER appuser
 EXPOSE ${LOGIN_PORT:-8085}
 
 # Variables de entorno
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
+ENV JAVA_OPTS="-Xmx128m -Xms64m -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Xss512k"
 
 # Healthcheck
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
