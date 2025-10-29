@@ -1,5 +1,6 @@
 package com.microservicios.login.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -14,6 +15,12 @@ import org.springframework.session.web.http.DefaultCookieSerializer;
 @EnableRedisHttpSession(maxInactiveIntervalInSeconds = 3600) // Sesión expira en 1 hora
 public class SessionConfig {
 
+    @Value("${cookie.secure:false}")
+    private boolean cookieSecure;
+
+    @Value("${cookie.same-site:Lax}")
+    private String cookieSameSite;
+
     /**
      * CONFIGURACIÓN DE COOKIES AUTOMÁTICAS
      *
@@ -22,6 +29,14 @@ public class SessionConfig {
      * - HttpOnly: JavaScript no puede leer la cookie (anti-hackers)
      * - SameSite: Protección contra ataques CSRF
      * - Path: La cookie funciona en toda la aplicación
+     *
+     * PRODUCCIÓN (Railway/HTTPS):
+     * - Secure = true (solo HTTPS)
+     * - SameSite = None (permite cross-site con OAuth)
+     *
+     * DESARROLLO (localhost):
+     * - Secure = false (permite HTTP)
+     * - SameSite = Lax (más seguro para desarrollo)
      */
     @Bean
     public CookieSerializer cookieSerializer() {
@@ -33,11 +48,11 @@ public class SessionConfig {
         // HttpOnly = true: JavaScript no puede robar la cookie
         serializer.setUseHttpOnlyCookie(true);
 
-        // Secure = false para desarrollo (cambiar a true en producción con HTTPS)
-        serializer.setUseSecureCookie(false);
+        // Secure: configurable por entorno
+        serializer.setUseSecureCookie(cookieSecure);
 
-        // SameSite protege contra ataques de otros sitios web
-        serializer.setSameSite("Lax");
+        // SameSite: configurable por entorno
+        serializer.setSameSite(cookieSameSite);
 
         // Path = "/" significa que la cookie funciona en toda la app
         serializer.setCookiePath("/");
