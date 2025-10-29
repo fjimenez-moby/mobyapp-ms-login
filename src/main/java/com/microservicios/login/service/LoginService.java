@@ -140,14 +140,26 @@ public class LoginService {
     }
 
     public TokenResponse exchangeCodeForTokens(String code, String redirectUri) throws IOException {
-        return new GoogleAuthorizationCodeTokenRequest(
-                new NetHttpTransport(),
-                GsonFactory.getDefaultInstance(),
-                googleClientId,
-                googleClientSecret,
-                code,
-                redirectUri)
-                .execute();
+        logger.info("=== OAUTH TOKEN EXCHANGE DEBUG ===");
+        logger.info("Client ID: " + googleClientId);
+        logger.info("Client Secret: " + (googleClientSecret != null ? googleClientSecret.substring(0, Math.min(10, googleClientSecret.length())) + "..." : "NULL"));
+        logger.info("Redirect URI: " + redirectUri);
+        logger.info("Code (first 20 chars): " + (code != null ? code.substring(0, Math.min(20, code.length())) + "..." : "NULL"));
+        logger.info("==================================");
+
+        try {
+            return new GoogleAuthorizationCodeTokenRequest(
+                    new NetHttpTransport(),
+                    GsonFactory.getDefaultInstance(),
+                    googleClientId,
+                    googleClientSecret,
+                    code,
+                    redirectUri)
+                    .execute();
+        } catch (IOException e) {
+            logger.severe("Error al intercambiar código por tokens: " + e.getMessage());
+            throw e;
+        }
     }
 
     public UserDTO authenticateUser(String idTokenString, String accessToken, String refreshToken) throws GeneralSecurityException, IOException, MailInvalidoException {
